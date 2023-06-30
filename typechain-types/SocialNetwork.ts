@@ -10,7 +10,11 @@ import type {
   OnEvent,
   PromiseOrValue,
 } from "./common";
-import type { FunctionFragment, Result } from "@ethersproject/abi";
+import type {
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
 import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   BaseContract,
@@ -30,7 +34,9 @@ export interface SocialNetworkInterface extends utils.Interface {
     "getLastPostId()": FunctionFragment;
     "getPost(uint256)": FunctionFragment;
     "like(uint256)": FunctionFragment;
+    "likedTweet(address,uint256)": FunctionFragment;
     "post(string)": FunctionFragment;
+    "tweetDataMap(uint256)": FunctionFragment;
     "unlike(uint256)": FunctionFragment;
   };
 
@@ -39,7 +45,9 @@ export interface SocialNetworkInterface extends utils.Interface {
       | "getLastPostId"
       | "getPost"
       | "like"
+      | "likedTweet"
       | "post"
+      | "tweetDataMap"
       | "unlike"
   ): FunctionFragment;
 
@@ -56,8 +64,16 @@ export interface SocialNetworkInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "likedTweet",
+    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "post",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "tweetDataMap",
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "unlike",
@@ -70,11 +86,46 @@ export interface SocialNetworkInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "getPost", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "like", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "likedTweet", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "post", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "tweetDataMap",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "unlike", data: BytesLike): Result;
 
-  events: {};
+  events: {
+    "TweetPosted(address,string,uint256)": EventFragment;
+    "likeToggled(address,uint256,bool)": EventFragment;
+  };
+
+  getEvent(nameOrSignatureOrTopic: "TweetPosted"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "likeToggled"): EventFragment;
 }
+
+export interface TweetPostedEventObject {
+  posterAddr: string;
+  message: string;
+  time: BigNumber;
+}
+export type TweetPostedEvent = TypedEvent<
+  [string, string, BigNumber],
+  TweetPostedEventObject
+>;
+
+export type TweetPostedEventFilter = TypedEventFilter<TweetPostedEvent>;
+
+export interface likeToggledEventObject {
+  sender: string;
+  postId: BigNumber;
+  isLike: boolean;
+}
+export type likeToggledEvent = TypedEvent<
+  [string, BigNumber, boolean],
+  likeToggledEventObject
+>;
+
+export type likeToggledEventFilter = TypedEventFilter<likeToggledEvent>;
 
 export interface SocialNetwork extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -121,10 +172,28 @@ export interface SocialNetwork extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    likedTweet(
+      arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
+
     post(
       _message: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    tweetDataMap(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
+      [string, BigNumber, BigNumber, string] & {
+        message: string;
+        totalLike: BigNumber;
+        time: BigNumber;
+        posterAddr: string;
+      }
+    >;
 
     unlike(
       _postId: PromiseOrValue<BigNumberish>,
@@ -150,10 +219,28 @@ export interface SocialNetwork extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  likedTweet(
+    arg0: PromiseOrValue<string>,
+    arg1: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
   post(
     _message: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  tweetDataMap(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<
+    [string, BigNumber, BigNumber, string] & {
+      message: string;
+      totalLike: BigNumber;
+      time: BigNumber;
+      posterAddr: string;
+    }
+  >;
 
   unlike(
     _postId: PromiseOrValue<BigNumberish>,
@@ -179,10 +266,28 @@ export interface SocialNetwork extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    likedTweet(
+      arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
     post(
       _message: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    tweetDataMap(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<
+      [string, BigNumber, BigNumber, string] & {
+        message: string;
+        totalLike: BigNumber;
+        time: BigNumber;
+        posterAddr: string;
+      }
+    >;
 
     unlike(
       _postId: PromiseOrValue<BigNumberish>,
@@ -190,7 +295,29 @@ export interface SocialNetwork extends BaseContract {
     ): Promise<void>;
   };
 
-  filters: {};
+  filters: {
+    "TweetPosted(address,string,uint256)"(
+      posterAddr?: PromiseOrValue<string> | null,
+      message?: null,
+      time?: null
+    ): TweetPostedEventFilter;
+    TweetPosted(
+      posterAddr?: PromiseOrValue<string> | null,
+      message?: null,
+      time?: null
+    ): TweetPostedEventFilter;
+
+    "likeToggled(address,uint256,bool)"(
+      sender?: PromiseOrValue<string> | null,
+      postId?: null,
+      isLike?: null
+    ): likeToggledEventFilter;
+    likeToggled(
+      sender?: PromiseOrValue<string> | null,
+      postId?: null,
+      isLike?: null
+    ): likeToggledEventFilter;
+  };
 
   estimateGas: {
     getLastPostId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -205,9 +332,20 @@ export interface SocialNetwork extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    likedTweet(
+      arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     post(
       _message: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    tweetDataMap(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     unlike(
@@ -229,9 +367,20 @@ export interface SocialNetwork extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    likedTweet(
+      arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     post(
       _message: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    tweetDataMap(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     unlike(
