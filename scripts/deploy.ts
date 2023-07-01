@@ -1,7 +1,7 @@
 import { ethers } from "hardhat"
 
 async function main() {
-    const submission = await ethers.getContractFactory("SocialNetworkExample")
+    const submission = await ethers.getContractFactory("SocialNetwork")
     const contract = await submission.deploy()
 
     await contract.deployed()

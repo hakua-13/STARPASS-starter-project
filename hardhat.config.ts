@@ -35,6 +35,9 @@ const config: HardhatUserConfig = {
                     ? [process.env.PRIVATE_KEY]
                     : [],
         },
+        localhost: {
+            url: 'http://127.0.0.1:8545'
+        }
     },
     typechain: {
         outDir: "typechain-types",

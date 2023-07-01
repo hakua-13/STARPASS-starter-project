@@ -16,22 +16,13 @@ contract SocialNetwork is ISocialNetwork {
         address posterAddr;
     }
 
-    struct TweetDataForDisplay{
-        uint256 postId;
-        string message;
-        uint256 totalLike;
-        bool isLike;
-        uint256 time;
-        address posterAddr;
-    }
-
     // ツイートを格納するmapping変数
     mapping(uint256 => TweetData) public tweetDataMap;
     // ツイートに対していいねしたかどうかを格納するmapping変数
     mapping(address => mapping(uint256 => bool)) public likedTweet;
 
     event TweetPosted(address indexed posterAddr, string message, uint256 time);
-    event likeToggled(address indexed sender, uint256 postId,bool isLike);
+    event LikeToggled(address indexed sender, uint256 postId,bool isLike);
 
     function post(string memory _message) external {
         uint256 newId = _tweetIds.current();
@@ -67,7 +58,7 @@ contract SocialNetwork is ISocialNetwork {
 
         likedTweet[msg.sender][_postId] = true;
         tweetDataMap[_postId].totalLike ++;
-        emit likeToggled(msg.sender, _postId, true);
+        emit LikeToggled(msg.sender, _postId, true);
     }
 
     function unlike(uint256 _postId) external{
@@ -75,25 +66,25 @@ contract SocialNetwork is ISocialNetwork {
 
         likedTweet[msg.sender][_postId] = false;
         tweetDataMap[_postId].totalLike --;
-        emit likeToggled(msg.sender, _postId, false);
+        emit LikeToggled(msg.sender, _postId, false);
     }
 
     // More functions
-    function getAllPost() public view returns(TweetDataForDisplay [] memory){
+    function getAllPost() public view returns(TweetData [] memory, bool[] memory){
         uint256 lastPostId = getLastPostId();
-        TweetDataForDisplay[] memory tweetDataForDisplayArray = new TweetDataForDisplay[](lastPostId);
+        TweetData[] memory tweetData = new TweetData[](lastPostId);
+        bool[] memory tweetLikedStatus = new bool[](lastPostId);
         for(uint256 i=0; i<lastPostId; i++){
-            TweetData memory tweetData = tweetDataMap[i];
-            
-            tweetDataForDisplayArray[i] = TweetDataForDisplay({
-                postId: i,
-                message: tweetData.message,
-                totalLike: tweetData.totalLike,
-                isLike: likedTweet[msg.sender][i],
-                time: tweetData.time,
-                posterAddr: tweetData.posterAddr
+            TweetData memory tweet = tweetDataMap[i];
+            tweetData[i] = TweetData({
+                message: tweet.message,
+                totalLike: tweet.totalLike,
+                time: tweet.time,
+                posterAddr: tweet.posterAddr
             });
+
+            tweetLikedStatus[i] = likedTweet[msg.sender][i];
         }
-        return tweetDataForDisplayArray;
+        return (tweetData, tweetLikedStatus);
     }
 }
